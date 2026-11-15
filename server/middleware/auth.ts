@@ -32,19 +32,36 @@ export function signSessionToken(user: AuthUser): string {
   );
 }
 
-export function setSessionCookie(res: Response, token: string) {
+export function setSessionCookie(res: Response, token: string, req?: Request) {
   const { nodeEnv } = getEnvConfig();
+  const isHttps =
+    Boolean(req?.secure) ||
+    req?.headers['x-forwarded-proto'] === 'https' ||
+    (nodeEnv === 'production' && !req?.headers.host?.includes('localhost') && !req?.headers.host?.includes('127.0.0.1'));
+  const origin = req?.headers.origin;
+  const host = req?.headers.host;
+  const isCrossOrigin = Boolean(origin && host && !origin.includes(host));
+
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: nodeEnv === 'production',
+    sameSite: isCrossOrigin && isHttps ? 'none' : 'lax',
+    secure: isHttps,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   });
 }
 
-export function clearSessionCookie(res: Response) {
-  res.clearCookie(COOKIE_NAME, { path: '/' });
+export function clearSessionCookie(res: Response, req?: Request) {
+  const isHttps = Boolean(req?.secure) || req?.headers['x-forwarded-proto'] === 'https';
+  const origin = req?.headers.origin;
+  const host = req?.headers.host;
+  const isCrossOrigin = Boolean(origin && host && !origin.includes(host));
+
+  res.clearCookie(COOKIE_NAME, {
+    path: '/',
+    sameSite: isCrossOrigin && isHttps ? 'none' : 'lax',
+    secure: isHttps,
+  });
 }
 
 export function createAuthMiddleware(db: Database.Database) {

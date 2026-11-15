@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, MapPin, PhoneCall, ShieldCheck } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { ErrorBanner, LoadingSkeleton } from '../components/StateViews';
+import { useAccessibility } from '../context/AccessibilityContext';
+import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
+import { syncElderProfileToFirestore } from '../lib/firebase';
 
 interface Helpline {
   number: string;
@@ -18,6 +21,8 @@ interface Contact {
 }
 
 export default function EmergencyPage() {
+  const { user } = useAuth();
+  const { language } = useAccessibility();
   const [helplines, setHelplines] = useState<Helpline[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +77,15 @@ export default function EmergencyPage() {
       method: 'PUT',
       body: JSON.stringify({ phone, city, bloodGroup, allergies, medicalConditions, emergencyNotes }),
     });
+    await syncElderProfileToFirestore({
+      fullName: user?.full_name || 'Buddy User',
+      preferredLanguage: language,
+      phone,
+      city,
+      bloodGroup,
+      allergies,
+      emergencyNotes: emergencyNotes || medicalConditions,
+    }).catch(() => {});
     setSavedNotice('Voluntary emergency card saved.');
     setTimeout(() => setSavedNotice(null), 3500);
   };

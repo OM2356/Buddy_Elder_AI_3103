@@ -1,5 +1,15 @@
 # CHANGELOG — Buddy Elder AI
 
+## [1.1.2] — 2026-11-15
+### Fixed
+- Added Vercel serverless Express adapter (`/api/[[...route]].ts`) and Vercel `/tmp/buddy_elder.db` fallback so `/api/*` endpoints work on Vercel instead of returning HTTP 404.
+- Updated `src/lib/firebase.ts` to merge `VITE_FIREBASE_*` overrides cleanly on top of `firebase-applet-config.json`, enforce singleton initialization (`getApps()`), enable `browserLocalPersistence`, fall back from blocked popups to `signInWithRedirect`, handle `getRedirectResult`, and translate Firebase Auth error codes (`auth/unauthorized-domain`, `auth/operation-not-allowed`, `auth/invalid-credential`, etc.) into clear messages.
+- Wired Firebase Email/Password authentication (`registerWithFirebaseEmail`, `signInWithFirebaseEmail`, `sendFirebasePasswordReset`) and cold-start session recovery into `AuthContext.tsx` and `LoginPage.tsx`.
+- Added `VITE_API_BASE_URL` support, persistent token handling, and explicit non-JSON HTML error detection to `src/lib/api.ts` and `AssistantPage.tsx`.
+- Updated `server/middleware/auth.ts` cookie attributes (`SameSite=None; Secure` for cross-origin HTTPS, `SameSite=Lax` for local/HTTP) and `server/routes/auth.ts` to verify Firebase ID tokens against `FIREBASE_PROJECT_ID` while gating bootstrapped admin strictly on verified email.
+- Added Resend HTTP email service (`server/services/email.ts`) for password reset codes and optional admin feedback notifications.
+- Extended `firebase-blueprint.json`, `firestore.rules`, and `src/lib/firebase.ts` to cover `elder_profiles`, `caregivers`, `chat_history`, `learning_progress`, `wellness_checkins`, `emergency_contacts`, `feedback`, and `scam_reports` while preserving all existing collections.
+
 ## [1.1.1] — 2026-11-15
 ### Fixed
 - Migrated all application visual assets from unbundled `/src/assets/images/` string paths to `/public/images/` (`hero-elder-companion.jpg`, `academy-digital-learning.jpg`, `wellness-morning-routine.jpg`, `family-hub-connection.jpg`) so `vite build` includes them in `dist/images/` for Vercel and Node.js production deployments.

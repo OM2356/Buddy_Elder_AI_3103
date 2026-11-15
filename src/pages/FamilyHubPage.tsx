@@ -3,6 +3,7 @@ import { Check, Plus, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { EmptyState, ErrorBanner, LoadingSkeleton } from '../components/StateViews';
 import { apiFetch } from '../lib/api';
+import { syncCaregiverLinkToFirestore, syncEmergencyContactToFirestore } from '../lib/firebase';
 
 interface OverviewData {
   contacts: { id: string; name: string; phone: string; relationship: string; is_emergency: number }[];
@@ -49,10 +50,16 @@ export default function FamilyHubPage() {
   const addContact = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    await apiFetch('/api/family/contacts', {
+    const created = await apiFetch<{ contact?: { id: string } }>('/api/family/contacts', {
       method: 'POST',
       body: JSON.stringify({ name: contactName, phone: contactPhone, relationship: contactRel, isEmergency: true }),
     });
+    await syncEmergencyContactToFirestore({
+      id: created.contact?.id || `ec_${Date.now()}`,
+      name: contactName,
+      phone: contactPhone,
+      relationship: contactRel,
+    }).catch(() => {});
     setContactName('');
     setContactPhone('');
     await load();
@@ -67,7 +74,7 @@ export default function FamilyHubPage() {
     e.preventDefault();
     setError(null);
     try {
-      await apiFetch('/api/family/invite', {
+      const res = await apiFetch<{ invitation?: { id: string } }>('/api/family/invite', {
         method: 'POST',
         body: JSON.stringify({
           inviteeEmail: inviteEmail,
@@ -75,6 +82,13 @@ export default function FamilyHubPage() {
           proposedSharingLevel: inviteLevel,
         }),
       });
+      await syncCaregiverLinkToFirestore({
+        id: res.invitation?.id || `cg_${Date.now()}`,
+        caregiverEmail: inviteEmail,
+        relationship: inviteRel,
+        sharingLevel: inviteLevel,
+        status: 'pending',
+      }).catch(() => {});
       setInviteEmail('');
       await load();
     } catch (err) {

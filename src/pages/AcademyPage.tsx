@@ -6,6 +6,7 @@ import { EmptyState, ErrorBanner, LoadingSkeleton } from '../components/StateVie
 import { useAccessibility } from '../context/AccessibilityContext';
 import { useSpeech } from '../hooks/useSpeech';
 import { apiFetch } from '../lib/api';
+import { syncLearningProgressToFirestore } from '../lib/firebase';
 
 interface Lesson {
   id: string;
@@ -79,10 +80,18 @@ export default function AcademyPage() {
   }, []);
 
   const toggleProgress = async (courseId: string, lessonId: string, field: 'completed' | 'bookmarked', value: boolean) => {
+    const course = courses.find((c) => c.id === courseId);
+    const lesson = course?.lessons.find((l) => l.id === lessonId);
     await apiFetch('/api/academy/progress', {
       method: 'POST',
       body: JSON.stringify({ courseId, lessonId, [field]: value }),
     });
+    await syncLearningProgressToFirestore({
+      courseId,
+      lessonId,
+      completed: field === 'completed' ? value : Boolean(lesson?.completed),
+      bookmarked: field === 'bookmarked' ? value : Boolean(lesson?.bookmarked),
+    }).catch(() => {});
     await loadCourses();
   };
 
@@ -95,6 +104,12 @@ export default function AcademyPage() {
       body: JSON.stringify({ courseId, answers }),
     });
     setQuizResult(res);
+    await syncLearningProgressToFirestore({
+      courseId,
+      completed: true,
+      bookmarked: false,
+      quizScore: res.score,
+    }).catch(() => {});
     await loadCourses();
   };
 

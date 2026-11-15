@@ -4,10 +4,18 @@ import { ShieldCheck, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ErrorBanner } from '../components/StateViews';
 import { apiFetch } from '../lib/api';
+import { sendFirebasePasswordReset } from '../lib/firebase';
 import type { SupportedLang } from '../i18n/translations';
 
 export default function LoginPage({ initialMode = 'login' }: { initialMode?: 'login' | 'register' }) {
-  const { loginWithEmail, registerWithEmail, loginWithGoogle, user } = useAuth();
+  const {
+    loginWithEmail,
+    registerWithEmail,
+    loginWithGoogle,
+    user,
+    redirectError,
+    clearRedirectError,
+  } = useAuth();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
@@ -29,6 +37,13 @@ export default function LoginPage({ initialMode = 'login' }: { initialMode?: 'lo
   }, [initialMode]);
 
   useEffect(() => {
+    if (redirectError) {
+      setError(redirectError);
+      clearRedirectError();
+    }
+  }, [redirectError, clearRedirectError]);
+
+  useEffect(() => {
     if (user) {
       const dest = user.role === 'admin' ? '/admin' : user.role === 'caregiver' ? '/caregiver' : '/dashboard';
       navigate(dest, { replace: true });
@@ -44,7 +59,10 @@ export default function LoginPage({ initialMode = 'login' }: { initialMode?: 'lo
       if (mode === 'login') {
         await loginWithEmail(email, password);
       } else if (mode === 'register') {
-        await registerWithEmail({ email, password, fullName, role, preferredLanguage });
+        const res = await registerWithEmail({ email, password, fullName, role, preferredLanguage });
+        if (res.emailVerificationSent) {
+          setNotice('Account created! A verification email was sent to your inbox for cloud sync.');
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign-in failed. Please verify your details.');
@@ -59,19 +77,33 @@ export default function LoginPage({ initialMode = 'login' }: { initialMode?: 'lo
     setNotice(null);
     setSubmitting(true);
     try {
-      const data = await apiFetch<{ message: string; devResetToken?: string; smtpConfigured?: boolean }>(
-        '/api/auth/forgot-password',
-        {
+      const [fbReset, backendData] = await Promise.all([
+        sendFirebasePasswordReset(email).catch(() => ({ sent: false as const })),
+        apiFetch<{
+          message: string;
+          devResetToken?: string;
+          emailDeliveryConfigured?: boolean;
+        }>('/api/auth/forgot-password', {
           method: 'POST',
           body: JSON.stringify({ email }),
-        }
-      );
-      setResetRequested(true);
-      setNotice(
-        data.devResetToken
-          ? `${data.message} Local reset code: ${data.devResetToken}`
-          : data.message
-      );
+        }).catch(() => null),
+      ]);
+
+      setResetRequested(Boolean(backendData));
+
+      if (fbReset.sent && backendData?.emailDeliveryConfigured) {
+        setNotice('Password reset instructions have been sent to your email inbox.');
+      } else if (fbReset.sent) {
+        setNotice(
+          'A Firebase password reset link has been sent to your email inbox. Check your spam folder if you do not see it within a minute.'
+        );
+      } else if (backendData?.devResetToken) {
+        setNotice(`${backendData.message} Local reset code: ${backendData.devResetToken}`);
+      } else if (backendData?.message) {
+        setNotice(backendData.message);
+      } else {
+        throw new Error('Unable to request password reset right now.');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to request password reset.');
     } finally {
@@ -103,6 +135,7 @@ export default function LoginPage({ initialMode = 'login' }: { initialMode?: 'lo
 
   const handleGoogleSignIn = async () => {
     setError(null);
+    setNotice(null);
     setSubmitting(true);
     try {
       await loginWithGoogle(role);
@@ -135,7 +168,7 @@ export default function LoginPage({ initialMode = 'login' }: { initialMode?: 'lo
                 : 'Reset your password'}
             </h1>
             <p className="text-lg text-slate-600 dark:text-slate-300">
-              Use Google Sign-In for cloud sync across devices, or use your private password-protected account.
+              Any valid Google account holder can register or sign in for cloud sync across devices, or use a private email & password account.
             </p>
           </div>
 

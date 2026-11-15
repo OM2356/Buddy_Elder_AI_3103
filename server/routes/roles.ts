@@ -6,6 +6,7 @@ import { createAuthMiddleware, requireRole, type AuthedRequest } from '../middle
 import { logAudit } from '../services/audit.ts';
 import { exportUserBackup, restoreUserBackup, type EncryptedBackupEnvelope } from '../services/backup.ts';
 import { isGeminiConfigured } from '../services/gemini.ts';
+import { sendAdminNotificationEmail } from '../services/email.ts';
 import { indexDocumentChunks } from '../services/researchRag.ts';
 
 const caregiverNoteSchema = z.object({
@@ -192,6 +193,10 @@ export function createRolesAndUtilityRouter(db: Database.Database) {
       parsed.data.message.trim()
     );
     const item = db.prepare('SELECT * FROM feedback WHERE id = ?').get(id);
+    sendAdminNotificationEmail({
+      subject: `[Buddy Elder AI] New ${parsed.data.category} feedback (${parsed.data.rating}/5)`,
+      text: `Category: ${parsed.data.category}\nRating: ${parsed.data.rating}/5\nFrom user: ${req.user!.email}\nMessage:\n${parsed.data.message.trim()}`,
+    }).catch(() => {});
     res.status(201).json({ ok: true, feedback: item });
   });
 

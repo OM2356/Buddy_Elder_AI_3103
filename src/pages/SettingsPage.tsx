@@ -5,6 +5,7 @@ import { ErrorBanner } from '../components/StateViews';
 import { useAccessibility, type TextSize, type ThemeMode } from '../context/AccessibilityContext';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
+import { syncElderProfileToFirestore, syncUserProfileToFirestore } from '../lib/firebase';
 import type { SupportedLang } from '../i18n/translations';
 
 export default function SettingsPage() {
@@ -57,6 +58,22 @@ export default function SettingsPage() {
         method: 'PUT',
         body: JSON.stringify({ fullName, preferredLanguage: language, phone, city }),
       });
+      await Promise.all([
+        syncUserProfileToFirestore({
+          displayName: fullName,
+          role: user?.role || 'senior',
+          preferredLanguage: language,
+          textSize,
+          theme,
+          email: user?.email,
+        }),
+        syncElderProfileToFirestore({
+          fullName,
+          preferredLanguage: language,
+          phone,
+          city,
+        }),
+      ]).catch(() => {});
       await refreshUser();
       setNotice('Your profile details were updated.');
     } catch (err) {

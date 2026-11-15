@@ -14,6 +14,7 @@ import {
   type UserRole,
 } from '../middleware/auth.ts';
 import { logAudit } from '../services/audit.ts';
+import { isEmailDeliveryConfigured, sendPasswordResetEmail } from '../services/email.ts';
 import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
 
 const registerSchema = z.object({
@@ -22,6 +23,7 @@ const registerSchema = z.object({
   fullName: z.string().min(2).max(100),
   role: z.enum(['senior', 'caregiver']).default('senior'),
   preferredLanguage: z.enum(['en', 'hi', 'mr']).default('en'),
+  firebaseUid: z.string().min(6).max(128).optional(),
 });
 
 const loginSchema = z.object({
@@ -100,7 +102,8 @@ async function verifyFirebaseIdToken(idToken: string): Promise<{
   if (!cert) {
     throw new Error('Firebase signing key not recognized.');
   }
-  const projectId = firebaseConfig.projectId;
+  const { firebaseProjectId } = getEnvConfig();
+  const projectId = firebaseProjectId || firebaseConfig.projectId;
   const verified = jwt.verify(idToken, cert, {
     algorithms: ['RS256'],
     audience: projectId,
@@ -112,8 +115,8 @@ async function verifyFirebaseIdToken(idToken: string): Promise<{
   const emailVerified = Boolean(verified.email_verified);
   const name = String(verified.name || email.split('@')[0] || 'Buddy User');
 
-  if (!uid || !email || !emailVerified) {
-    throw new Error('Verified Google account email is required.');
+  if (!uid || !email) {
+    throw new Error('Firebase account UID and email are required.');
   }
   return { uid, email, name, emailVerified };
 }
@@ -155,7 +158,7 @@ export function createAuthRouter(db: Database.Database) {
       return;
     }
 
-    const { email, password, fullName, role, preferredLanguage } = parsed.data;
+    const { email, password, fullName, role, preferredLanguage, firebaseUid } = parsed.data;
     const normalizedEmail = email.trim().toLowerCase();
     const { bootstrappedAdminEmail } = getEnvConfig();
 
@@ -173,9 +176,9 @@ export function createAuthRouter(db: Database.Database) {
 
     const tx = db.transaction(() => {
       db.prepare(
-        `INSERT INTO users (id, email, password_hash, full_name, role, preferred_language)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      ).run(userId, normalizedEmail, passwordHash, fullName.trim(), assignedRole, preferredLanguage);
+        `INSERT INTO users (id, email, password_hash, full_name, role, firebase_uid, preferred_language)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run(userId, normalizedEmail, passwordHash, fullName.trim(), assignedRole, firebaseUid ?? null, preferredLanguage);
 
       db.prepare('INSERT INTO profiles (user_id) VALUES (?)').run(userId);
       db.prepare(
@@ -192,7 +195,7 @@ export function createAuthRouter(db: Database.Database) {
       preferredLanguage,
     };
     const token = signSessionToken(authUser);
-    setSessionCookie(res, token);
+    setSessionCookie(res, token, req);
 
     logAudit(db, {
       actorId: userId,
@@ -260,7 +263,7 @@ export function createAuthRouter(db: Database.Database) {
       preferredLanguage: row.preferred_language,
     };
     const token = signSessionToken(authUser);
-    setSessionCookie(res, token);
+    setSessionCookie(res, token, req);
 
     logAudit(db, {
       actorId: row.id,
@@ -308,7 +311,8 @@ export function createAuthRouter(db: Database.Database) {
           return;
         }
         userId = existing.id;
-        role = fbUser.email === bootstrappedAdminEmail.toLowerCase() ? 'admin' : existing.role;
+        const canBootstrappedAdmin = fbUser.emailVerified && fbUser.email === bootstrappedAdminEmail.toLowerCase();
+        role = canBootstrappedAdmin ? 'admin' : existing.role;
         fullName = existing.full_name;
         preferredLanguage = existing.preferred_language;
         db.prepare('UPDATE users SET firebase_uid = ?, role = ?, updated_at = datetime(\'now\') WHERE id = ?').run(
@@ -318,7 +322,8 @@ export function createAuthRouter(db: Database.Database) {
         );
       } else {
         userId = `usr_${crypto.randomUUID()}`;
-        role = fbUser.email === bootstrappedAdminEmail.toLowerCase() ? 'admin' : parsed.data.role || 'senior';
+        const canBootstrappedAdmin = fbUser.emailVerified && fbUser.email === bootstrappedAdminEmail.toLowerCase();
+        role = canBootstrappedAdmin ? 'admin' : parsed.data.role || 'senior';
         fullName = fbUser.name;
         const tx = db.transaction(() => {
           db.prepare(
@@ -339,7 +344,7 @@ export function createAuthRouter(db: Database.Database) {
         preferredLanguage,
       };
       const token = signSessionToken(authUser);
-      setSessionCookie(res, token);
+      setSessionCookie(res, token, req);
 
       logAudit(db, {
         actorId: userId,
@@ -370,7 +375,7 @@ export function createAuthRouter(db: Database.Database) {
         ipAddress: req.ip,
       });
     }
-    clearSessionCookie(res);
+    clearSessionCookie(res, req);
     res.json({ ok: true });
   });
 
@@ -499,7 +504,7 @@ export function createAuthRouter(db: Database.Database) {
     res.json({ ok: true, message: 'Password updated successfully.' });
   });
 
-  router.post('/forgot-password', (req, res) => {
+  router.post('/forgot-password', async (req, res) => {
     const parsed = forgotPasswordSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ ok: false, error: 'Please enter a valid email address.', code: 'VALIDATION_ERROR' });
@@ -511,11 +516,11 @@ export function createAuthRouter(db: Database.Database) {
       .prepare('SELECT id, is_active FROM users WHERE email = ?')
       .get(normalizedEmail) as { id: string; is_active: number } | undefined;
 
+    const emailDeliveryConfigured = isEmailDeliveryConfigured();
     const genericMessage = 'If an account matches that email, a password reset code has been generated.';
-    const smtpConfigured = Boolean(process.env.SMTP_HOST);
 
     if (!userRow || !userRow.is_active) {
-      res.json({ ok: true, message: genericMessage, smtpConfigured });
+      res.json({ ok: true, message: genericMessage, emailDeliveryConfigured, smtpConfigured: emailDeliveryConfigured });
       return;
     }
 
@@ -536,13 +541,33 @@ export function createAuthRouter(db: Database.Database) {
       ipAddress: req.ip,
     });
 
+    if (emailDeliveryConfigured) {
+      const delivery = await sendPasswordResetEmail({ to: normalizedEmail, resetCode: rawToken }).catch(() => ({
+        sent: false,
+      }));
+      if (!delivery.sent) {
+        res.status(502).json({
+          ok: false,
+          error: 'Unable to send reset email right now. Please try again shortly or use Firebase password reset.',
+          code: 'EMAIL_DELIVERY_FAILED',
+        });
+        return;
+      }
+      res.json({
+        ok: true,
+        message: 'If an account matches that email, we sent a password reset code to your inbox.',
+        emailDeliveryConfigured: true,
+        smtpConfigured: true,
+      });
+      return;
+    }
+
     res.json({
       ok: true,
-      message: smtpConfigured
-        ? genericMessage
-        : `${genericMessage} Note: No SMTP email server is configured in this local environment.`,
-      smtpConfigured,
-      ...(process.env.NODE_ENV !== 'production' && !smtpConfigured ? { devResetToken: rawToken } : {}),
+      message: `${genericMessage} Note: No email delivery service (RESEND_API_KEY) is configured in this environment.`,
+      emailDeliveryConfigured: false,
+      smtpConfigured: false,
+      ...(process.env.NODE_ENV !== 'production' ? { devResetToken: rawToken } : {}),
     });
   });
 

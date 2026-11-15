@@ -6,12 +6,12 @@ All endpoints return consistent JSON envelopes (`{ ok: true, ... }` or `{ ok: fa
 - `GET /api/health` — Database, Gemini configuration status, uptime
 - `POST /api/auth/register` — Create senior or caregiver account (bcrypt + JWT cookie)
 - `POST /api/auth/login` — Authenticate with email/password
-- `POST /api/auth/firebase` — Verify Firebase Google ID token and issue authoritative session JWT
+- `POST /api/auth/firebase` — Verify Firebase ID token (Google or Email/Password) against `FIREBASE_PROJECT_ID` and issue authoritative session JWT (admin escalation strictly requires `email_verified: true`)
 - `POST /api/auth/logout` — Clear session cookie and log audit event
 - `GET /api/auth/me` — Return current user, profile, and accessibility preferences
 - `PUT /api/auth/profile` — Update full name, preferred language, phone, and city
 - `POST /api/auth/change-password` — Authenticated password update (verifies current password)
-- `POST /api/auth/forgot-password` — Generate single-use 15-minute SHA-256 hashed reset token
+- `POST /api/auth/forgot-password` — Generate single-use 15-minute SHA-256 hashed reset token and send via Resend when `RESEND_API_KEY` + `RESEND_FROM_EMAIL` are configured
 - `POST /api/auth/reset-password` — Verify reset token and update password hash
 
 ## AI Buddy Assistant & Orchestrator

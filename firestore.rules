@@ -46,10 +46,12 @@ service cloud.firestore {
     // Validation Blueprints (Anti-Update-Gap)
     function isValidUserProfile(data, userId) {
       return data.keys().hasAll(['uid', 'displayName', 'role', 'preferredLanguage', 'textSize', 'theme', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['uid', 'displayName', 'role', 'preferredLanguage', 'textSize', 'theme', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'role', 'preferredLanguage', 'textSize', 'theme', 'createdAt', 'updatedAt'])
         && isValidId(data.uid)
         && data.uid == userId
         && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && (!('email' in data) || (data.email is string && data.email.size() <= 200))
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
         && data.role in ['senior', 'caregiver', 'admin']
         && data.preferredLanguage in ['en', 'hi', 'mr']
         && data.textSize in ['normal', 'large', 'xlarge']
@@ -69,6 +71,84 @@ service cloud.firestore {
         && (!('bloodGroup' in data) || (data.bloodGroup is string && data.bloodGroup.size() <= 16))
         && (!('emergencyNotes' in data) || (data.emergencyNotes is string && data.emergencyNotes.size() <= 500))
         && data.updatedAt is timestamp;
+    }
+
+    function isValidElderProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'fullName', 'preferredLanguage', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'fullName', 'preferredLanguage', 'city', 'phone', 'bloodGroup', 'allergies', 'emergencyNotes', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 100
+        && data.preferredLanguage in ['en', 'hi', 'mr']
+        && (!('city' in data) || (data.city is string && data.city.size() <= 100))
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 40))
+        && (!('bloodGroup' in data) || (data.bloodGroup is string && data.bloodGroup.size() <= 16))
+        && (!('allergies' in data) || (data.allergies is string && data.allergies.size() <= 300))
+        && (!('emergencyNotes' in data) || (data.emergencyNotes is string && data.emergencyNotes.size() <= 500))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCaregiverLink(data, docId) {
+      return data.keys().hasAll(['id', 'userId', 'caregiverEmail', 'relationship', 'sharingLevel', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'caregiverEmail', 'relationship', 'sharingLevel', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.id) && data.id == docId
+        && isValidId(data.userId)
+        && data.caregiverEmail is string && data.caregiverEmail.size() >= 3 && data.caregiverEmail.size() <= 200
+        && data.relationship is string && data.relationship.size() >= 1 && data.relationship.size() <= 80
+        && data.sharingLevel in ['PRIVATE', 'LIMITED', 'AUTHORIZED']
+        && data.status in ['pending', 'active', 'revoked']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidChatHistoryEntry(data, entryId) {
+      return data.keys().hasAll(['id', 'userId', 'conversationId', 'role', 'content', 'language', 'createdAt'])
+        && data.keys().hasOnly(['id', 'userId', 'conversationId', 'role', 'content', 'capabilityUsed', 'language', 'createdAt'])
+        && isValidId(data.id) && data.id == entryId
+        && isValidId(data.userId)
+        && isValidId(data.conversationId)
+        && data.role in ['user', 'assistant']
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 10000
+        && (!('capabilityUsed' in data) || (data.capabilityUsed is string && data.capabilityUsed.size() <= 80))
+        && data.language in ['en', 'hi', 'mr']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidLearningProgress(data, progressId) {
+      return data.keys().hasAll(['id', 'userId', 'courseId', 'completed', 'bookmarked', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'courseId', 'lessonId', 'completed', 'bookmarked', 'quizScore', 'updatedAt'])
+        && isValidId(data.id) && data.id == progressId
+        && isValidId(data.userId)
+        && isValidId(data.courseId)
+        && (!('lessonId' in data) || (data.lessonId is string && data.lessonId.size() <= 128))
+        && data.completed is bool
+        && data.bookmarked is bool
+        && (!('quizScore' in data) || (data.quizScore is int && data.quizScore >= 0 && data.quizScore <= 100))
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidEmergencyContact(data, contactId) {
+      return data.keys().hasAll(['id', 'userId', 'name', 'phone', 'relationship', 'createdAt'])
+        && data.keys().hasOnly(['id', 'userId', 'name', 'phone', 'relationship', 'createdAt'])
+        && isValidId(data.id) && data.id == contactId
+        && isValidId(data.userId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 40
+        && data.relationship is string && data.relationship.size() >= 1 && data.relationship.size() <= 80
+        && data.createdAt is timestamp;
+    }
+
+    function isValidFeedbackEntry(data, feedbackId) {
+      return data.keys().hasAll(['id', 'userId', 'category', 'rating', 'message', 'status', 'createdAt'])
+        && data.keys().hasOnly(['id', 'userId', 'category', 'rating', 'message', 'status', 'createdAt'])
+        && isValidId(data.id) && data.id == feedbackId
+        && isValidId(data.userId)
+        && data.category in ['suggestion', 'accessibility', 'bug', 'praise']
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 1000
+        && data.status in ['new', 'reviewed', 'resolved']
+        && data.createdAt is timestamp;
     }
 
     function isValidConversation(data, convId) {
@@ -173,7 +253,7 @@ service cloud.firestore {
         && incoming().updatedAt == request.time
         && (
           isAdmin() ||
-          (isOwner(userId) && incoming().role == existing().role && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'preferredLanguage', 'textSize', 'theme', 'updatedAt']))
+          (isOwner(userId) && incoming().role == existing().role && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'photoURL', 'preferredLanguage', 'textSize', 'theme', 'updatedAt']))
         );
       allow delete: if isValidId(userId) && isAdmin();
 
@@ -198,7 +278,130 @@ service cloud.firestore {
       }
     }
 
-    // 4. Conversations & Messages (Master Gate Pattern)
+    // 4. Elder Profiles (strictly owner-scoped, non-public PII protected)
+    match /elder_profiles/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isVerified() && (resource.data.uid == request.auth.uid || isBootstrappedAdminToken());
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidElderProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isVerified()
+        && isValidElderProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'preferredLanguage', 'city', 'phone', 'bloodGroup', 'allergies', 'emergencyNotes', 'updatedAt']))
+        );
+      allow delete: if isValidId(userId) && (isOwner(userId) || isAdmin());
+    }
+
+    // 5. Caregivers (senior-owned links; invited caregiver may read where email matches & verified)
+    match /caregivers/{caregiverDocId} {
+      allow get: if isValidId(caregiverDocId) && isVerified() && (
+        existing().userId == request.auth.uid ||
+        existing().caregiverEmail == request.auth.token.email ||
+        isAdmin()
+      );
+      allow list: if isVerified() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.caregiverEmail == request.auth.token.email ||
+        isBootstrappedAdminToken()
+      );
+      allow create: if isValidId(caregiverDocId)
+        && isVerified()
+        && isValidCaregiverLink(incoming(), caregiverDocId)
+        && incoming().userId == request.auth.uid
+        && incoming().status in ['pending', 'active']
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(caregiverDocId)
+        && isVerified()
+        && isValidCaregiverLink(incoming(), caregiverDocId)
+        && incoming().userId == existing().userId
+        && incoming().caregiverEmail == existing().caregiverEmail
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (existing().userId == request.auth.uid && existing().status != 'revoked' && incoming().diff(existing()).affectedKeys().hasOnly(['relationship', 'sharingLevel', 'status', 'updatedAt']))
+        );
+      allow delete: if isValidId(caregiverDocId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // 6. Chat History (strictly private to owner; excluded from non-owner reads)
+    match /chat_history/{entryId} {
+      allow get: if isValidId(entryId) && isVerified() && existing().userId == request.auth.uid;
+      allow list: if isVerified() && resource.data.userId == request.auth.uid;
+      allow create: if isValidId(entryId)
+        && isVerified()
+        && isValidChatHistoryEntry(incoming(), entryId)
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(entryId) && isVerified() && existing().userId == request.auth.uid;
+    }
+
+    // 7. Learning Progress
+    match /learning_progress/{progressId} {
+      allow get: if isValidId(progressId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());
+      allow create: if isValidId(progressId)
+        && isVerified()
+        && isValidLearningProgress(incoming(), progressId)
+        && incoming().userId == request.auth.uid
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(progressId)
+        && isVerified()
+        && isValidLearningProgress(incoming(), progressId)
+        && incoming().userId == existing().userId
+        && incoming().courseId == existing().courseId
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['lessonId', 'completed', 'bookmarked', 'quizScore', 'updatedAt']))
+        );
+      allow delete: if isValidId(progressId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // 8. Emergency Contacts
+    match /emergency_contacts/{contactId} {
+      allow get: if isValidId(contactId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());
+      allow create: if isValidId(contactId)
+        && isVerified()
+        && isValidEmergencyContact(incoming(), contactId)
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(contactId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // 9. Feedback
+    match /feedback/{feedbackId} {
+      allow get: if isValidId(feedbackId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());
+      allow create: if isValidId(feedbackId)
+        && isVerified()
+        && isValidFeedbackEntry(incoming(), feedbackId)
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'new'
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(feedbackId)
+        && isVerified()
+        && isValidFeedbackEntry(incoming(), feedbackId)
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && isAdmin()
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+      allow delete: if isValidId(feedbackId) && isAdmin();
+    }
+
+    // 10. Conversations & Messages (Master Gate Pattern)
     match /conversations/{convId} {
       allow get: if isValidId(convId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
       allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());
@@ -238,7 +441,27 @@ service cloud.firestore {
       }
     }
 
-    // 5. Wellness Check-ins
+    // 11. Wellness Check-ins (both canonical wellness_checkins & legacy wellnessCheckins)
+    match /wellness_checkins/{checkinId} {
+      allow get: if isValidId(checkinId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());
+      allow create: if isValidId(checkinId)
+        && isVerified()
+        && isValidWellnessCheckin(incoming(), checkinId)
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(checkinId)
+        && isVerified()
+        && isValidWellnessCheckin(incoming(), checkinId)
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && (
+          isAdmin() ||
+          (existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['sharingLevel', 'notes']))
+        );
+      allow delete: if isValidId(checkinId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
     match /wellnessCheckins/{checkinId} {
       allow get: if isValidId(checkinId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
       allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());
@@ -259,7 +482,7 @@ service cloud.firestore {
       allow delete: if isValidId(checkinId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
     }
 
-    // 6. Smart Reminders
+    // 12. Smart Reminders
     match /reminders/{reminderId} {
       allow get: if isValidId(reminderId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
       allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());
@@ -282,7 +505,7 @@ service cloud.firestore {
       allow delete: if isValidId(reminderId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
     }
 
-    // 7. Autonomy Engine Consent Records (Terminal State Locked)
+    // 13. Autonomy Engine Consent Records (Terminal State Locked)
     match /consentRecords/{consentId} {
       allow get: if isValidId(consentId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
       allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());
@@ -312,7 +535,19 @@ service cloud.firestore {
       allow delete: if isValidId(consentId) && isAdmin();
     }
 
-    // 8. Scam Shield Reports
+    // 14. Scam Shield Reports (both canonical scam_reports & legacy scamReports)
+    match /scam_reports/{reportId} {
+      allow get: if isValidId(reportId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());
+      allow create: if isValidId(reportId)
+        && isVerified()
+        && isValidScamReport(incoming(), reportId)
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(reportId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
     match /scamReports/{reportId} {
       allow get: if isValidId(reportId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
       allow list: if isVerified() && (resource.data.userId == request.auth.uid || isBootstrappedAdminToken());

@@ -7,6 +7,8 @@
       "properties": {
         "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
         "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 200 },
+        "photoURL": { "type": "string", "maxLength": 500 },
         "role": { "type": "string", "enum": ["senior", "caregiver", "admin"] },
         "preferredLanguage": { "type": "string", "enum": ["en", "hi", "mr"] },
         "textSize": { "type": "string", "enum": ["normal", "large", "xlarge"] },
@@ -30,6 +32,101 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "updatedAt"]
+    },
+    "ElderProfile": {
+      "title": "ElderProfile",
+      "description": "Senior citizen profile, locality, language, and voluntary emergency card owned by userId.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "preferredLanguage": { "type": "string", "enum": ["en", "hi", "mr"] },
+        "city": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "bloodGroup": { "type": "string", "maxLength": 16 },
+        "allergies": { "type": "string", "maxLength": 300 },
+        "emergencyNotes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fullName", "preferredLanguage", "createdAt", "updatedAt"]
+    },
+    "CaregiverLink": {
+      "title": "CaregiverLink",
+      "description": "Caregiver link record managed under senior consent.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "caregiverEmail": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "relationship": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "sharingLevel": { "type": "string", "enum": ["PRIVATE", "LIMITED", "AUTHORIZED"] },
+        "status": { "type": "string", "enum": ["pending", "active", "revoked"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "caregiverEmail", "relationship", "sharingLevel", "status", "createdAt", "updatedAt"]
+    },
+    "ChatHistoryEntry": {
+      "title": "ChatHistoryEntry",
+      "description": "Private AI Buddy assistant interaction summary owned by userId.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "conversationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string", "minLength": 1, "maxLength": 10000 },
+        "capabilityUsed": { "type": "string", "maxLength": 80 },
+        "language": { "type": "string", "enum": ["en", "hi", "mr"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "conversationId", "role", "content", "language", "createdAt"]
+    },
+    "LearningProgress": {
+      "title": "LearningProgress",
+      "description": "Digital Learning Academy lesson completion, bookmarking, and quiz score.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "courseId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "lessonId": { "type": "string", "maxLength": 128 },
+        "completed": { "type": "boolean" },
+        "bookmarked": { "type": "boolean" },
+        "quizScore": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "courseId", "completed", "bookmarked", "updatedAt"]
+    },
+    "EmergencyContact": {
+      "title": "EmergencyContact",
+      "description": "Trusted emergency contact owned by userId.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "phone": { "type": "string", "minLength": 5, "maxLength": 40 },
+        "relationship": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "phone", "relationship", "createdAt"]
+    },
+    "FeedbackEntry": {
+      "title": "FeedbackEntry",
+      "description": "User-submitted feedback entry with admin review status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "category": { "type": "string", "enum": ["suggestion", "accessibility", "bug", "praise"] },
+        "rating": { "type": "integer" },
+        "message": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["new", "reviewed", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "category", "rating", "message", "status", "createdAt"]
     },
     "AdminRecord": {
       "title": "AdminRecord",
@@ -147,6 +244,38 @@
       "schema": { "$ref": "#/entities/UserPrivateInfo" },
       "description": "Isolated PII document strictly accessible only to owner or admin."
     },
+    "/elder_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/ElderProfile" },
+      "description": "Senior citizen profile and voluntary emergency summary owned by userId."
+    },
+    "/caregivers/{caregiverDocId}": {
+      "schema": { "$ref": "#/entities/CaregiverLink" },
+      "description": "Caregiver connection and invitation records."
+    },
+    "/chat_history/{entryId}": {
+      "schema": { "$ref": "#/entities/ChatHistoryEntry" },
+      "description": "Private AI Buddy assistant chat history entries owned by userId."
+    },
+    "/learning_progress/{progressId}": {
+      "schema": { "$ref": "#/entities/LearningProgress" },
+      "description": "Academy lesson completion, bookmark, and quiz progress owned by userId."
+    },
+    "/wellness_checkins/{checkinId}": {
+      "schema": { "$ref": "#/entities/WellnessCheckin" },
+      "description": "Daily wellness check-in records owned by userId."
+    },
+    "/emergency_contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/EmergencyContact" },
+      "description": "Trusted emergency contacts owned by userId."
+    },
+    "/feedback/{feedbackId}": {
+      "schema": { "$ref": "#/entities/FeedbackEntry" },
+      "description": "User feedback submissions."
+    },
+    "/scam_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/ScamReport" },
+      "description": "Scam Shield risk analysis reports owned by userId."
+    },
     "/admins/{userId}": {
       "schema": { "$ref": "#/entities/AdminRecord" },
       "description": "Trusted administrator lookup table."
@@ -161,7 +290,7 @@
     },
     "/wellnessCheckins/{checkinId}": {
       "schema": { "$ref": "#/entities/WellnessCheckin" },
-      "description": "Daily wellness check-in records."
+      "description": "Legacy-compatible daily wellness check-in records."
     },
     "/reminders/{reminderId}": {
       "schema": { "$ref": "#/entities/Reminder" },
@@ -173,7 +302,7 @@
     },
     "/scamReports/{reportId}": {
       "schema": { "$ref": "#/entities/ScamReport" },
-      "description": "Scam Shield analysis reports."
+      "description": "Legacy-compatible Scam Shield analysis reports."
     }
   }
 }

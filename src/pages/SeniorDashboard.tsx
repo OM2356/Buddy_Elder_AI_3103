@@ -15,6 +15,7 @@ import { Layout } from '../components/Layout';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
+import { syncFeedbackToFirestore } from '../lib/firebase';
 
 export default function SeniorDashboard() {
   const { user } = useAuth();
@@ -39,10 +40,16 @@ export default function SeniorDashboard() {
   const submitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackMsg.trim()) return;
-    await apiFetch('/api/feedback', {
+    const res = await apiFetch<{ feedback?: { id: string } }>('/api/feedback', {
       method: 'POST',
       body: JSON.stringify({ category: feedbackCategory, rating: 5, message: feedbackMsg }),
     });
+    await syncFeedbackToFirestore({
+      id: res.feedback?.id || `fbk_${Date.now()}`,
+      category: feedbackCategory,
+      rating: 5,
+      message: feedbackMsg,
+    }).catch(() => {});
     setFeedbackMsg('');
     setFeedbackSent(true);
     setTimeout(() => setFeedbackSent(false), 4000);

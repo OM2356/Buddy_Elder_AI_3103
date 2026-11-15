@@ -103,4 +103,101 @@ describe('Buddy Elder AI Frontend Components', () => {
     fireEvent.click(screen.getByRole('button', { name: /Create Item/i }));
     expect(retryFn).toHaveBeenCalledTimes(2);
   });
+
+  it('formats Firebase Auth error codes into actionable senior-friendly messages and resolves Firebase config cleanly', async () => {
+    const { formatFirebaseAuthError, resolvedFirebaseConfig } = await import('../src/lib/firebase');
+    expect(resolvedFirebaseConfig.projectId).toBe('gen-lang-client-0339283160');
+    expect(resolvedFirebaseConfig.firestoreDatabaseId).toBeTruthy();
+
+    expect(formatFirebaseAuthError({ code: 'auth/unauthorized-domain' })).toMatch(/Authorized domains/i);
+    expect(formatFirebaseAuthError({ code: 'auth/operation-not-allowed' })).toMatch(/not enabled/i);
+    expect(formatFirebaseAuthError({ code: 'auth/email-already-in-use' })).toMatch(/already exists/i);
+    expect(formatFirebaseAuthError({ code: 'auth/invalid-credential' })).toMatch(/Invalid email or password/i);
+    expect(formatFirebaseAuthError({ code: 'auth/popup-blocked' })).toMatch(/blocked the Google sign-in popup/i);
+    expect(formatFirebaseAuthError({ code: 'auth/operation-not-supported-in-this-environment' })).toMatch(
+      /full-page redirect/i
+    );
+    expect(formatFirebaseAuthError({ code: 'auth/account-exists-with-different-credential' })).toMatch(
+      /another sign-in method/i
+    );
+    expect(formatFirebaseAuthError({ code: 'auth/credential-already-in-use' })).toMatch(/already linked/i);
+  });
+
+  it('never assigns admin role in client Firestore user profile sync and preserves non-admin Google user fields', async () => {
+    const { buildUserProfileSyncPayload } = await import('../src/lib/firebase');
+
+    const createPayload = buildUserProfileSyncPayload({
+      uid: 'google_public_uid_123',
+      isExisting: false,
+      displayName: 'Everyday Google User',
+      role: 'admin',
+      preferredLanguage: 'en',
+      textSize: 'large',
+      theme: 'light',
+      email: 'Everyday.User@gmail.com',
+      photoURL: 'https://lh3.googleusercontent.com/a/example-photo',
+    }) as Record<string, unknown>;
+
+    expect(createPayload.uid).toBe('google_public_uid_123');
+    expect(createPayload.email).toBe('everyday.user@gmail.com');
+    expect(createPayload.photoURL).toBe('https://lh3.googleusercontent.com/a/example-photo');
+    expect(createPayload.displayName).toBe('Everyday Google User');
+    expect(createPayload.role).toBe('senior');
+    expect(createPayload.createdAt).toBeDefined();
+    expect(createPayload.updatedAt).toBeDefined();
+
+    const updatePayload = buildUserProfileSyncPayload({
+      uid: 'google_public_uid_123',
+      isExisting: true,
+      displayName: 'Everyday Google User Updated',
+      role: 'caregiver',
+      preferredLanguage: 'hi',
+      textSize: 'xlarge',
+      theme: 'dark',
+      email: 'Everyday.User@gmail.com',
+      photoURL: 'https://lh3.googleusercontent.com/a/updated-photo',
+    }) as Record<string, unknown>;
+
+    expect(updatePayload.role).toBeUndefined();
+    expect(updatePayload.createdAt).toBeUndefined();
+    expect(updatePayload.email).toBe('everyday.user@gmail.com');
+    expect(updatePayload.photoURL).toBe('https://lh3.googleusercontent.com/a/updated-photo');
+    expect(updatePayload.updatedAt).toBeDefined();
+  });
+
+  it('rejects HTML responses on API calls with ApiError instead of returning empty JSON, and clears token on 401', async () => {
+    const { apiFetch, ApiError, buildApiUrl, getApiToken, setApiToken } = await import('../src/lib/api');
+
+    expect(buildApiUrl('/api/health')).toBe('/api/health');
+
+    setApiToken('sample-jwt-token');
+    expect(getApiToken()).toBe('sample-jwt-token');
+
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        new Response('<!doctype html><html><body>Not API</body></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        })
+      );
+
+      await expect(apiFetch('/api/auth/me')).rejects.toMatchObject({
+        code: 'INVALID_API_RESPONSE',
+        status: 502,
+      });
+
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ok: false, error: 'Unauthorized', code: 'UNAUTHORIZED' }), {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        })
+      );
+
+      await expect(apiFetch('/api/auth/me')).rejects.toBeInstanceOf(ApiError);
+      expect(getApiToken()).toBeNull();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

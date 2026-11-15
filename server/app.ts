@@ -33,7 +33,11 @@ export function createApp(db: Database.Database) {
     cors({
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
-        if (env.allowedOrigins.includes(origin) || origin.endsWith('.run.app')) {
+        if (
+          env.allowedOrigins.includes(origin) ||
+          origin.endsWith('.run.app') ||
+          /^https:\/\/buddy-elder-ai[a-z0-9-]*\.vercel\.app$/i.test(origin)
+        ) {
           return callback(null, true);
         }
         return callback(new Error('Origin not permitted by CORS policy'));

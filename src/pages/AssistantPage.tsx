@@ -17,7 +17,8 @@ import { Layout } from '../components/Layout';
 import { EmptyState, ErrorBanner, LoadingSkeleton } from '../components/StateViews';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { useSpeech } from '../hooks/useSpeech';
-import { apiFetch, getApiToken } from '../lib/api';
+import { apiFetch, buildApiUrl, getApiToken } from '../lib/api';
+import { syncChatHistoryEntryToFirestore } from '../lib/firebase';
 
 interface Conversation {
   id: string;
@@ -140,7 +141,7 @@ export default function AssistantPage() {
 
     try {
       const token = getApiToken();
-      const resp = await fetch('/api/assistant/chat', {
+      const resp = await fetch(buildApiUrl('/api/assistant/chat'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,6 +168,7 @@ export default function AssistantPage() {
         const decoder = new TextDecoder();
         let buffer = '';
         let resolvedConvId = activeId;
+        let fullAssistantText = '';
 
         while (true) {
           const { done, value } = await reader.read();
@@ -179,6 +181,7 @@ export default function AssistantPage() {
             const ev = JSON.parse(line.slice(6));
             if (ev.type === 'chunk') {
               resolvedConvId = ev.conversationId;
+              fullAssistantText += ev.text;
               setStreamingReply((prev) => prev + ev.text);
             } else if (ev.type === 'error') {
               throw new Error(ev.error);
@@ -192,14 +195,56 @@ export default function AssistantPage() {
           setActiveId(resolvedConvId);
           await loadConversations(searchQuery);
           await loadMessages(resolvedConvId);
+          if (fullAssistantText.trim()) {
+            const stamp = Date.now();
+            await Promise.all([
+              syncChatHistoryEntryToFirestore({
+                id: `msg_u_${stamp}`,
+                conversationId: resolvedConvId,
+                role: 'user',
+                content: trimmed,
+                language,
+              }),
+              syncChatHistoryEntryToFirestore({
+                id: `msg_a_${stamp}`,
+                conversationId: resolvedConvId,
+                role: 'assistant',
+                content: fullAssistantText,
+                language,
+              }),
+            ]).catch(() => {});
+          }
         }
         setStreamingReply('');
       } else {
+        if (!contentType.includes('application/json')) {
+          throw new Error('Unexpected non-JSON response from AI Assistant endpoint.');
+        }
         const data = await resp.json();
         if (!data.ok) throw new Error(data.error || 'Assistant failed');
         setActiveId(data.conversationId);
         await loadConversations(searchQuery);
         await loadMessages(data.conversationId);
+        if (data.conversationId && data.reply) {
+          const stamp = Date.now();
+          await Promise.all([
+            syncChatHistoryEntryToFirestore({
+              id: `msg_u_${stamp}`,
+              conversationId: data.conversationId,
+              role: 'user',
+              content: trimmed,
+              language,
+            }),
+            syncChatHistoryEntryToFirestore({
+              id: `msg_a_${stamp}`,
+              conversationId: data.conversationId,
+              role: 'assistant',
+              content: String(data.reply),
+              capabilityUsed: data.capability,
+              language,
+            }),
+          ]).catch(() => {});
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to reach AI Buddy right now.');

@@ -603,4 +603,77 @@ describe('Buddy Elder AI Full-Stack API, Security & Business Logic', () => {
       expect(orchestrator.classifyIntent(prompt, role)).toBe(expected);
     }
   });
+
+  it('links optional firebaseUid on registration and reports emailDeliveryConfigured truthfully on forgot-password', async () => {
+    const prevResendKey = process.env.RESEND_API_KEY;
+    const prevResendFrom = process.env.RESEND_FROM_EMAIL;
+    delete process.env.RESEND_API_KEY;
+    delete process.env.RESEND_FROM_EMAIL;
+
+    try {
+      const reg = await request(app).post('/api/auth/register').send({
+        email: 'fb.linked@example.com',
+        password: 'StrongPassword123!',
+        fullName: 'Linked User',
+        role: 'senior',
+        preferredLanguage: 'en',
+        firebaseUid: 'fb_uid_sample_999',
+      });
+      expect(reg.status).toBe(201);
+
+      const userRow = db
+        .prepare('SELECT firebase_uid FROM users WHERE email = ?')
+        .get('fb.linked@example.com') as { firebase_uid: string | null };
+      expect(userRow.firebase_uid).toBe('fb_uid_sample_999');
+
+      const forgot = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'fb.linked@example.com' });
+      expect(forgot.status).toBe(200);
+      expect(forgot.body.emailDeliveryConfigured).toBe(false);
+    } finally {
+      if (prevResendKey !== undefined) process.env.RESEND_API_KEY = prevResendKey;
+      if (prevResendFrom !== undefined) process.env.RESEND_FROM_EMAIL = prevResendFrom;
+    }
+  });
+
+  it('serves /api/health via the Vercel serverless Express adapter', async () => {
+    process.env.VERCEL = '1';
+    process.env.DATABASE_PATH = ':memory:';
+    try {
+      const { default: vercelHandler } = await import('../api/index.ts');
+      const res = await request(vercelHandler).get('/api/health');
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.database).toBe('connected');
+    } finally {
+      delete process.env.VERCEL;
+      delete process.env.DATABASE_PATH;
+    }
+  });
+
+  it('allows public non-admin Google/email accounts as senior or caregiver and rejects admin self-escalation', async () => {
+    const caregiverReg = await request(app).post('/api/auth/register').send({
+      email: 'public.caregiver@gmail.com',
+      password: 'StrongPassword123!',
+      fullName: 'Public Caregiver',
+      role: 'caregiver',
+    });
+    expect(caregiverReg.status).toBe(201);
+    expect(caregiverReg.body.user.role).toBe('caregiver');
+
+    const blockedEscalation = await request(app).post('/api/auth/register').send({
+      email: 'attacker@gmail.com',
+      password: 'StrongPassword123!',
+      fullName: 'Attacker',
+      role: 'admin',
+    });
+    expect(blockedEscalation.status).toBe(400);
+
+    const blockedFirebaseEscalation = await request(app).post('/api/auth/firebase').send({
+      idToken: 'x'.repeat(40),
+      role: 'admin',
+    });
+    expect(blockedFirebaseEscalation.status).toBe(400);
+  });
 });
