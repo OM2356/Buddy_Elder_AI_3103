@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --body-font-size: 20px;
+}
+
+html.text-size-normal {
+  --body-font-size: 20px;
+}
+html.text-size-large {
+  --body-font-size: 22px;
+}
+html.text-size-xlarge {
+  --body-font-size: 24px;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--body-font-size);
+  line-height: 1.6;
+  background-color: #faf7f0;
+  color: #0f2544;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.dark body {
+  background-color: #0b1320;
+  color: #f4f7fb;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+*:focus-visible {
+  outline: 3px solid #0d9488;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

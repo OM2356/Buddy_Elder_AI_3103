@@ -1,0 +1,179 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Non-PII user profile and accessibility preferences for Buddy Elder AI.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "role": { "type": "string", "enum": ["senior", "caregiver", "admin"] },
+        "preferredLanguage": { "type": "string", "enum": ["en", "hi", "mr"] },
+        "textSize": { "type": "string", "enum": ["normal", "large", "xlarge"] },
+        "theme": { "type": "string", "enum": ["light", "dark"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "role", "preferredLanguage", "textSize", "theme", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated PII and voluntary emergency health summary strictly restricted to the owner.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "city": { "type": "string", "maxLength": 100 },
+        "bloodGroup": { "type": "string", "maxLength": 16 },
+        "emergencyNotes": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrator marker document.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 200 },
+        "grantedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "grantedAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "AI Buddy conversation thread owned by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "language": { "type": "string", "enum": ["en", "hi", "mr"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "language", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Message within a conversation subcollection.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "conversationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string", "minLength": 1, "maxLength": 10000 },
+        "capabilityUsed": { "type": "string", "maxLength": 80 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "conversationId", "userId", "role", "content", "createdAt"]
+    },
+    "WellnessCheckin": {
+      "title": "WellnessCheckin",
+      "description": "Daily wellness check-in entry controlled by senior privacy settings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "mood": { "type": "string", "enum": ["great", "good", "okay", "low", "stressed"] },
+        "energyLevel": { "type": "integer" },
+        "sleepHours": { "type": "number" },
+        "waterGlasses": { "type": "integer" },
+        "notes": { "type": "string", "maxLength": 500 },
+        "sharingLevel": { "type": "string", "enum": ["PRIVATE", "LIMITED", "AUTHORIZED"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "mood", "energyLevel", "sleepHours", "waterGlasses", "sharingLevel", "createdAt"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "Smart reminder for medication, hydration, exercise, or appointments.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "category": { "type": "string", "enum": ["medication", "water", "exercise", "appointment", "learning", "family", "custom"] },
+        "scheduleTime": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "recurring": { "type": "string", "enum": ["none", "daily", "weekly"] },
+        "completed": { "type": "boolean" },
+        "timezone": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "category", "scheduleTime", "recurring", "completed", "timezone", "createdAt", "updatedAt"]
+    },
+    "ConsentRecord": {
+      "title": "ConsentRecord",
+      "description": "Autonomy Engine consent grant or revocation controlled by the senior.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "granteeEmail": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "moduleName": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "sharingLevel": { "type": "string", "enum": ["PRIVATE", "LIMITED", "AUTHORIZED"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "revoked"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "granteeEmail", "moduleName", "sharingLevel", "status", "createdAt", "updatedAt"]
+    },
+    "ScamReport": {
+      "title": "ScamReport",
+      "description": "Saved Scam Shield risk analysis record for a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "channel": { "type": "string", "enum": ["sms", "whatsapp", "email", "url", "payment", "phone"] },
+        "riskLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "riskScore": { "type": "integer" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "channel", "riskLevel", "riskScore", "summary", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Public/preference user profile owned by userId."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated PII document strictly accessible only to owner or admin."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Trusted administrator lookup table."
+    },
+    "/conversations/{convId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "User AI Buddy conversation metadata."
+    },
+    "/conversations/{convId}/messages/{msgId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages belonging to a user's conversation."
+    },
+    "/wellnessCheckins/{checkinId}": {
+      "schema": { "$ref": "#/entities/WellnessCheckin" },
+      "description": "Daily wellness check-in records."
+    },
+    "/reminders/{reminderId}": {
+      "schema": { "$ref": "#/entities/Reminder" },
+      "description": "User smart reminders."
+    },
+    "/consentRecords/{consentId}": {
+      "schema": { "$ref": "#/entities/ConsentRecord" },
+      "description": "Senior-controlled Autonomy Engine consent records."
+    },
+    "/scamReports/{reportId}": {
+      "schema": { "$ref": "#/entities/ScamReport" },
+      "description": "Scam Shield analysis reports."
+    }
+  }
+}

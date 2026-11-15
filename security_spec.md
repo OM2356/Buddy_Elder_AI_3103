@@ -1,0 +1,24 @@
+# Security Specification — Firestore Rules (`security_spec.md`)
+
+## 1. Data Invariants
+1. Every document ID and foreign ID (`userId`, `convId`, `msgId`, `checkinId`, `reminderId`, `consentId`, `reportId`) must match `^[a-zA-Z0-9_\\-]+$` and have length `<= 128`.
+2. Users cannot self-assign `admin` role on `/users/{userId}` creation or escalate `role` during updates.
+3. PII in `/users/{userId}/private/{docId}` is strictly isolated to the owner (`request.auth.uid == userId`) or verified admin.
+4. Subcollection `/conversations/{convId}/messages/{msgId}` enforces the Master Gate `get()` on parent `/conversations/$(convId)` verifying ownership.
+5. Terminal consent states (`rejected`, `revoked`) in `/consentRecords/{consentId}` cannot be flipped back to `approved` by unauthorized actors (terminal state lock, overridable only by `isAdmin()`).
+6. All `createdAt` / `updatedAt` timestamps must match `request.time`.
+7. All `allow list` rules explicitly enforce `resource.data.userId == request.auth.uid` (no client query trust, no `get()`/`exists()` inside `allow list`).
+
+## 2. The "Dirty Dozen" Adversarial Payloads (Expected: `PERMISSION_DENIED`)
+1. **Self-Admin Escalation on Create**: `POST /users/u1` with `{ uid: "u1", role: "admin", ... }` -> DENIED (`role` restricted to `'senior'` or `'caregiver'` on client create).
+2. **Ghost Field Shadow Update**: `PATCH /users/u1` with `{ displayName: "A", isVerifiedAdmin: true, updatedAt: request.time }` -> DENIED by `affectedKeys().hasOnly(...)` & `keys().hasOnly(...)`.
+3. **Unverified Email Spoofing**: Request with `email: "omkarsathe3103@gmail.com"` and `email_verified: false` -> DENIED (`email_verified == true` mandated).
+4. **PII Cross-User Read**: User `u2` reading `/users/u1/private/info` -> DENIED (`isOwner(u1)` fails).
+5. **Blanket List Scraping**: `list /wellnessCheckins` without `where("userId", "==", uid)` -> DENIED (`resource.data.userId == request.auth.uid` enforced).
+6. **ID Poisoning**: Document ID of 500 characters or containing `/` / `$` -> DENIED by `isValidId()`.
+7. **Timestamp Forgery**: Create `/reminders/r1` with client-supplied past timestamp `createdAt` != `request.time` -> DENIED.
+8. **Immutable Owner Tamper**: Update `/reminders/r1` attempting to change `userId` to `u2` -> DENIED (`incoming().userId == existing().userId`).
+9. **Orphan Message Injection**: Create `/conversations/otherConv/messages/m1` where `otherConv` belongs to `u2` -> DENIED by Master Gate `get()` on parent conversation.
+10. **Terminal State Bypass**: Update `/consentRecords/c1` from `status: "revoked"` back to `status: "approved"` -> DENIED by terminal state lock.
+11. **Oversized Payload (Denial of Wallet)**: Create `/conversations/c1/messages/m1` with `content` length `100000` -> DENIED (`content.size() <= 10000`).
+12. **Client Admin Collection Tamper**: Client attempting `setDoc` on `/admins/u1` -> DENIED (`allow write: if false`).

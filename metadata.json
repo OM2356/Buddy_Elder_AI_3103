@@ -1,0 +1,6 @@
+{
+  "name": "Buddy Elder AI",
+  "description": "Your Trusted Digital Companion — Accessible, multilingual AI assistant, Scam Shield, OCR Audio Reader, Digital Learning Academy, Wellness Center, Research Knowledge Hub, and Family Autonomy Hub for senior citizens and caregivers.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
