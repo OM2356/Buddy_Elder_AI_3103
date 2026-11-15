@@ -1,5 +1,11 @@
 # CHANGELOG — Buddy Elder AI
 
+## [1.1.1] — 2026-11-15
+### Fixed
+- Migrated all application visual assets from unbundled `/src/assets/images/` string paths to `/public/images/` (`hero-elder-companion.jpg`, `academy-digital-learning.jpg`, `wellness-morning-routine.jpg`, `family-hub-connection.jpg`) so `vite build` includes them in `dist/images/` for Vercel and Node.js production deployments.
+- Added `/public/favicon.svg` and `/public/images/fallback-companion.svg`, wired `og:image`/`twitter:image` metadata in `index.html`, and upgraded `SafeImage` (`src/components/StateViews.tsx`) with two-stage local SVG fallback and explicit dimensions/loading attributes.
+- Updated `vercel.json` and `server.ts` so `/images/*`, `/assets/*`, and `/favicon.svg` do not fall back to `index.html` on missing paths.
+
 ## [1.1.0] — 2026-11-15
 ### Added
 - Migration `002_password_reset_and_research_chunks`: `password_reset_tokens` (SHA-256 hashed, 15-min expiry, single-use) and `research_chunks` tables.

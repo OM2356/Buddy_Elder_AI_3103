@@ -21,7 +21,10 @@ async function startServer() {
     const distDir = path.resolve(process.cwd(), 'dist');
     if (fs.existsSync(distDir)) {
       app.use(express.static(distDir));
-      app.get('/{*splat}', (_req, res) => {
+      app.use(['/images', '/assets', '/favicon.svg'], (_req, res) => {
+        res.status(404).end();
+      });
+      app.get('*', (_req, res) => {
         res.sendFile(path.join(distDir, 'index.html'));
       });
     }

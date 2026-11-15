@@ -104,7 +104,7 @@ export function createApp(db: Database.Database) {
   app.use('/api', createRemindersAndEmergencyRouter(db));
   app.use('/api', createRolesAndUtilityRouter(db));
 
-  app.use('/api/{*splat}', (_req, res) => {
+  app.use('/api', (_req, res) => {
     res.status(404).json({ ok: false, error: 'API endpoint not found.', code: 'NOT_FOUND' });
   });
 

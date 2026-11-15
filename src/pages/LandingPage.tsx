@@ -85,10 +85,13 @@ export default function LandingPage() {
         </div>
 
         <div className="lg:col-span-5">
-          <div className="h-full min-h-[300px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="h-full min-h-[240px] sm:min-h-[300px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             <SafeImage
-              src="/src/assets/images/hero_elder_companion_1794748934555.jpg"
+              src="/images/hero-elder-companion.jpg"
               alt="Senior couple smiling together while using a tablet at a sunlit wooden table"
+              width={1376}
+              height={768}
+              loading="eager"
               className="w-full h-full object-cover"
             />
           </div>
@@ -134,8 +137,11 @@ export default function LandingPage() {
         <article className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col">
           <div className="aspect-[4/3]">
             <SafeImage
-              src="/src/assets/images/academy_digital_learning_1794748934330.jpg"
+              src="/images/academy-digital-learning.jpg"
               alt="Smartphone on an oak desk next to reading glasses and notebook"
+              width={1200}
+              height={896}
+              loading="lazy"
               className="w-full h-full object-cover"
             />
           </div>
@@ -151,8 +157,11 @@ export default function LandingPage() {
         <article className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col">
           <div className="aspect-[4/3]">
             <SafeImage
-              src="/src/assets/images/wellness_morning_routine_1794748935028.jpg"
+              src="/images/wellness-morning-routine.jpg"
               alt="Herbal tea, glass of water, and wellness journal on linen table"
+              width={1200}
+              height={896}
+              loading="lazy"
               className="w-full h-full object-cover"
             />
           </div>
@@ -168,8 +177,11 @@ export default function LandingPage() {
         <article id="family" className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col">
           <div className="aspect-[4/3]">
             <SafeImage
-              src="/src/assets/images/family_hub_connection_1794748937129.jpg"
+              src="/images/family-hub-connection.jpg"
               alt="Senior couple smiling on a family video call"
+              width={1200}
+              height={896}
+              loading="lazy"
               className="w-full h-full object-cover"
             />
           </div>

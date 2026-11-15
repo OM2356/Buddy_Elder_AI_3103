@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, ImageOff, Inbox, RotateCcw } from 'lucide-react';
 
 export function LoadingSkeleton({ rows = 3 }: { rows?: number }) {
@@ -87,14 +87,30 @@ export function SafeImage({
   src,
   alt,
   className = '',
+  fallbackSrc = '/images/fallback-companion.svg',
+  loading = 'lazy',
+  decoding = 'async',
+  width,
+  height,
 }: {
   src: string;
   alt: string;
   className?: string;
+  fallbackSrc?: string;
+  loading?: 'eager' | 'lazy';
+  decoding?: 'async' | 'sync' | 'auto';
+  width?: number;
+  height?: number;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [stage, setStage] = useState<'primary' | 'fallback' | 'empty'>(
+    src ? 'primary' : fallbackSrc ? 'fallback' : 'empty'
+  );
 
-  if (failed || !src) {
+  useEffect(() => {
+    setStage(src ? 'primary' : fallbackSrc ? 'fallback' : 'empty');
+  }, [src, fallbackSrc]);
+
+  if (stage === 'empty') {
     return (
       <div
         className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#EFF6FF] to-[#E6F4F1] dark:from-slate-800 dark:to-slate-900 text-[#0F2544] dark:text-slate-200 p-6 text-center ${className}`}
@@ -107,12 +123,24 @@ export function SafeImage({
     );
   }
 
+  const activeSrc = stage === 'primary' ? src : fallbackSrc;
+
   return (
     <img
-      src={src}
+      src={activeSrc}
       alt={alt}
+      width={width}
+      height={height}
+      loading={loading}
+      decoding={decoding}
       referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (stage === 'primary' && fallbackSrc && fallbackSrc !== src) {
+          setStage('fallback');
+        } else {
+          setStage('empty');
+        }
+      }}
       className={className}
     />
   );

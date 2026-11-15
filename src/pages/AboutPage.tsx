@@ -65,8 +65,11 @@ export default function AboutPage() {
           </div>
           <div className="lg:col-span-5 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             <SafeImage
-              src="/src/assets/images/family_hub_connection_1794748937129.jpg"
+              src="/images/family-hub-connection.jpg"
               alt="Older adults connecting cheerfully with family over video"
+              width={1200}
+              height={896}
+              loading="eager"
               className="w-full h-full object-cover aspect-[4/3]"
             />
           </div>

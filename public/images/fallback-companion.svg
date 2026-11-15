@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Buddy Elder AI illustration">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#EFF6FF" />
+      <stop offset="50%" stop-color="#FAF7F0" />
+      <stop offset="100%" stop-color="#E6F4F1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bgGrad)" />
+  <circle cx="980" cy="180" r="140" fill="#0F766E" opacity="0.08" />
+  <circle cx="220" cy="720" r="180" fill="#0F2544" opacity="0.06" />
+  <g transform="translate(460, 250)">
+    <rect width="280" height="280" rx="56" fill="#0F766E" opacity="0.12" />
+    <path d="M140 52L218 86V146C218 197.5 184.5 239 140 252C95.5 239 62 197.5 62 146V86L140 52Z" fill="#0F766E" />
+    <path d="M140 192C140 192 98 164 98 134C98 120.2 108.8 110 121.8 110C129.8 110 136.6 114.2 140 120.5C143.4 114.2 150.2 110 158.2 110C171.2 110 182 120.2 182 134C182 164 140 192 140 192Z" fill="#FAF7F0" />
+  </g>
+  <text x="600" y="600" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="38" font-weight="700" fill="#0F2544">Buddy Elder AI</text>
+  <text x="600" y="648" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="500" fill="#0F766E">Your Trusted Digital Companion</text>
+</svg>
